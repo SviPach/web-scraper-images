@@ -52,6 +52,12 @@ def image_search():
             print("---Content:", img_obj.content)
             time.sleep(2)
 
+            img_link = item.find("img")["src"]
+            print("---Image link:", img_link)
+
+            website_link = item.find("div", {"class": "img_info hon"}).find("a")["href"]
+            print("---Website link:", website_link)
+
             img_name = item.find("a", {"class": "inflnk"}).attrs["aria-label"]
             img_name = re.sub(r'[\\/*?:"<>|]', "_", img_name)
             print("---Name:", img_name)
