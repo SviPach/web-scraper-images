@@ -5,11 +5,13 @@ from io import BytesIO
 import time
 import re
 import os
+from bcolors import Bcolors as bc
 
 def image_search():
     os.makedirs("./SearchResults/", exist_ok=True)
-    search = input("Search for ('-stop' to exit): ")
+    search = input(bc.HEADER + "Search for ('-stop' to exit): " + bc.ENDC)
     if search == "-stop":
+        print(bc.BLUE + "Exiting..." + bc.ENDC)
         return
 
     params = {"q": search}
@@ -24,14 +26,21 @@ def image_search():
         r = requests.get("http://www.bing.com/images/search", params=params, headers=headers)
         r.raise_for_status()
     except Exception as e:
-        print("Connection error:", e.__class__.__name__)
+        print(bc.FAIL + "Connection error:", bc.BOLD + e.__class__.__name__ + bc.ENDC)
         return
 
     soup = BeautifulSoup(r.text, "html.parser")
-    links_raw = soup.find("div", {"id": "mmComponent_images_2"}).find_all("li")
+    container = soup.find("div", {"id": "mmComponent_images_2"})
+
+    if container is None:
+        print(bc.FAIL + "Could not find image container." + bc.ENDC)
+        return
+
+    links_raw = container.find_all("li")
+
     time.sleep(2)
 
-    print("-Amount of raw links:", len(links_raw))
+    print(bc.BLUE + "-Amount of raw links:" + bc.ENDC, len(links_raw))
     links = []
     for link in links_raw:
         if link.has_attr("data-idx") and link.find("a", {"class": "inflnk"}) is not None:
@@ -40,46 +49,46 @@ def image_search():
     amount = 0
     if len(links) != 0:
         while True:
-            print("-Amount of images:", len(links))
+            print(bc.BLUE + "-Amount of images:" + bc.ENDC, len(links))
             try:
-                amount = int(input("How many photos to get: "))
+                amount = int(input(bc.HEADER + "How many photos to get: " + bc.ENDC))
             except ValueError:
-                print("Please enter a number.")
+                print(bc.FAIL + "Please enter a number." + bc.ENDC)
                 continue
 
             if amount not in range(0, len(links) + 1):
-                print("Not a valid amount of photos.")
+                print(bc.FAIL + "Not a valid amount of photos." + bc.ENDC)
                 continue
             break
 
         for i in range(amount):
             item = links[i]
-            print(f"----------[{i+1}]:")
-            print("---Item:", item)
+            print(bc.WARNING + f"----------[{i+1}]:" + bc.ENDC)
+            print(bc.BLUE + "---Item:" + bc.ENDC, item)
 
             try:
                 img_obj = requests.get(item.find("img")["src"])
                 img_obj.raise_for_status()
             except Exception as e:
-                print("Failed to fetch image:", e.__class__.__name__)
+                print(bc.FAIL + "Failed to fetch image:", bc.BOLD + e.__class__.__name__ + bc.ENDC)
                 return
 
-            print("---Content:", img_obj.content)
+            print(bc.BLUE + "---Content:" + bc.ENDC, img_obj.content)
             time.sleep(2)
 
             img_link = item.find("img")["src"]
-            print("---Image link:", img_link)
+            print(bc.BLUE + "---Image link:" + bc.ENDC, img_link)
 
             website_link = item.find("div", {"class": "img_info hon"}).find("a")["href"]
-            print("---Website link:", website_link)
+            print(bc.BLUE + "---Website link:" + bc.ENDC, website_link)
 
             img_name = item.find("a", {"class": "inflnk"}).attrs["aria-label"]
             img_name = re.sub(r'[\\/*?:"<>|]', "_", img_name)
-            print("---Name:", img_name)
+            print(bc.BLUE + "---Name:" + bc.ENDC, img_name)
 
             img = Image.open(BytesIO(img_obj.content))
             img_format = img.format.lower() if img.format is not None else "jpeg"
-            print("---Format:", img_format)
+            print(bc.BLUE + "---Format:" + bc.ENDC, img_format)
 
             if img_format == "webp":
                 img = img.convert("RGB")
@@ -89,13 +98,13 @@ def image_search():
 
             os.makedirs("./SearchResults/" + search, exist_ok=True)
             img.save(f"./SearchResults/{search}/" + img_name, img_format)
-            print("-----Success!\nSaved as:", img_name)
+            print(bc.GREEN + "-----Success!\nSaved as:" + bc.ENDC, img_name)
             time.sleep(1)
             print("\n")
     else:
-        print("No images found")
+        print(bc.FAIL + "No images found" + bc.ENDC)
 
-    print("Photos are saved in:", "./SearchResults/" + search, "\n\n")
+    print(bc.BLUE + bc.UNDERLINE + "Photos are saved in:" + bc.ENDC, "./SearchResults/" + search, "\n\n")
     time.sleep(2)
     image_search()
 
