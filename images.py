@@ -20,35 +20,50 @@ def image_search():
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://www.bing.com/"
     }
-    r = requests.get("http://www.bing.com/images/search", params=params, headers=headers)
+    try:
+        r = requests.get("http://www.bing.com/images/search", params=params, headers=headers)
+        r.raise_for_status()
+    except Exception as e:
+        print("Connection error:", e.__class__.__name__)
+        return
 
     soup = BeautifulSoup(r.text, "html.parser")
     links_raw = soup.find("div", {"id": "mmComponent_images_2"}).find_all("li")
     time.sleep(2)
 
-    print("Amount of raw links:", len(links_raw))
+    print("-Amount of raw links:", len(links_raw))
     links = []
     for link in links_raw:
         if link.has_attr("data-idx") and link.find("a", {"class": "inflnk"}) is not None:
             links.append(link)
-    amount_found = len(links)
 
+    amount = 0
     if len(links) != 0:
         while True:
-            print("Amount of images:", amount_found)
-            amount = int(input("How many photos to get: "))
+            print("-Amount of images:", len(links))
+            try:
+                amount = int(input("How many photos to get: "))
+            except ValueError:
+                print("Please enter a number.")
+                continue
 
-            if amount not in range(0, amount_found+1):
+            if amount not in range(0, len(links) + 1):
                 print("Not a valid amount of photos.")
                 continue
             break
 
         for i in range(amount):
-
             item = links[i]
             print(f"----------[{i+1}]:")
             print("---Item:", item)
-            img_obj = requests.get(item.find("img")["src"])
+
+            try:
+                img_obj = requests.get(item.find("img")["src"])
+                img_obj.raise_for_status()
+            except Exception as e:
+                print("Failed to fetch image:", e.__class__.__name__)
+                return
+
             print("---Content:", img_obj.content)
             time.sleep(2)
 
@@ -75,10 +90,13 @@ def image_search():
             os.makedirs("./SearchResults/" + search, exist_ok=True)
             img.save(f"./SearchResults/{search}/" + img_name, img_format)
             print("-----Success!\nSaved as:", img_name)
+            time.sleep(1)
             print("\n")
     else:
         print("No images found")
 
+    print("Photos are saved in:", "./SearchResults/" + search, "\n\n")
+    time.sleep(2)
     image_search()
 
 image_search()
